@@ -1,7 +1,6 @@
 import { CampaignContext } from './CurrentCompaign';
 import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
-import more from '../../../../../../dist/Svg/More.svg';
 import more from '../../../../../../../public/public/Svg/More.svg';
 import { useNavigate } from 'react-router-dom';
 import ContractDetails from './ContractDetails';
