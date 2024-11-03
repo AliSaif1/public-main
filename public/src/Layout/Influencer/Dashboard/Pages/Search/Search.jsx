@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const Search = () => {
-  const [earnings, setEarnings] = useState(0); // New state for earnings
+  const [earnings, setEarnings] = useState(0);
   const [paymentAccount, setPaymentAccount] = useState('');
   const [accountHolderName, setAccountHolderName] = useState('');
   const [bankName, setBankName] = useState('');
@@ -35,7 +35,7 @@ const Search = () => {
         });
         if (earningsResponse.ok) {
           const earningsData = await earningsResponse.json();
-          setEarnings(earningsData.earnings); // Update to match API response field
+          setEarnings(earningsData.earnings);
         } else {
           setMessage('Failed to fetch earnings.');
         }
@@ -84,13 +84,41 @@ const Search = () => {
       if (parseFloat(withdrawalAmount) > earnings) {
         setMessage("Withdrawal amount can't be greater than available earnings.");
       } else {
-        setMessage(`Withdrawal request of $${withdrawalAmount} submitted successfully to ${selectedAccount}.`);
-        setWithdrawalAmount('');
+        // Prepare the request data
+        const requestData = {
+          accountID: selectedAccount, // Use the selected account's _id
+          amount: parseFloat(withdrawalAmount),
+        };
+
+        // Use Fetch API to make the request
+        fetch('/api/addWithdrawalRequest', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('authToken')}`, // Pass the auth token from localStorage
+          },
+          body: JSON.stringify(requestData),
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok ' + response.statusText);
+          }
+          return response.json();
+        })
+        .then(data => {
+          // Handle the successful response
+          setMessage(`Withdrawal request of $${withdrawalAmount} submitted successfully to ${selectedAccount}.`);
+          setWithdrawalAmount(''); // Clear the input field
+        })
+        .catch(error => {
+          // Handle any errors
+          setMessage('An error occurred while submitting the withdrawal request: ' + error.message);
+        });
       }
     } else {
       setMessage('Please enter a valid amount for withdrawal and select an account.');
     }
-  };
+  };  
   
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-5">
@@ -151,8 +179,8 @@ const Search = () => {
                 className="border border-gray-300 p-3 w-full rounded-md focus:outline-none focus:ring focus:ring-blue-300"
               >
                 <option value="">-- Select Account --</option>
-                {accounts.map((account, index) => (
-                  <option key={index} value={account.paymentAccount}>
+                {accounts.map((account) => (
+                  <option key={account._id} value={account._id}> {/* Use account._id */}
                     {account.accountHolderName} - {account.paymentAccount} ({account.bankName})
                   </option>
                 ))}
