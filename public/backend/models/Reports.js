@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const reportSchema = new mongoose.Schema({
   Name: { type: String, required: true, unique: true },
-  fullName: { type: String, required: true, unique: true },
+  fullName: { type: String, unique: true },
   AvgEngagementRate: { type: Number, required: true },
   FollowerCount: { type: Number, required: true },
   NoOfPosts: { type: Number, required: true },
