@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 
 const Search = () => {
+  const [earnings, setEarnings] = useState(0); // New state for earnings
   const [paymentAccount, setPaymentAccount] = useState('');
   const [accountHolderName, setAccountHolderName] = useState('');
   const [bankName, setBankName] = useState('');
@@ -9,46 +10,54 @@ const Search = () => {
   const [accounts, setAccounts] = useState([]);
   const [selectedAccount, setSelectedAccount] = useState('');
 
-  // Fetch payment accounts on component mount
+  // Fetch payment accounts and earnings on component mount
   useEffect(() => {
-    const fetchPaymentAccounts = async () => {
-      const authToken = localStorage.getItem('authToken'); // Retrieve authToken from localStorage
-      
-      try {
-        const response = await fetch('/api/getPaymentAccounts', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${authToken}`, // Set Authorization header with Bearer token
-          },
-        });
+    const fetchData = async () => {
+      const authToken = localStorage.getItem('authToken');
 
-        if (response.ok) {
-          const data = await response.json();
-          setAccounts(data.accounts); // Assuming the response contains an accounts array
+      try {
+        // Fetch payment accounts
+        const accountsResponse = await fetch('/api/getPaymentAccounts', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${authToken}` },
+        });
+        if (accountsResponse.ok) {
+          const accountsData = await accountsResponse.json();
+          setAccounts(accountsData.accounts);
         } else {
           setMessage('Failed to fetch payment accounts. Please try again.');
         }
+
+        // Fetch earnings
+        const earningsResponse = await fetch('/api/getEarnings', {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${authToken}` },
+        });
+        if (earningsResponse.ok) {
+          const earningsData = await earningsResponse.json();
+          setEarnings(earningsData.earnings); // Update to match API response field
+        } else {
+          setMessage('Failed to fetch earnings.');
+        }
       } catch (error) {
-        setMessage('An error occurred while fetching payment accounts.');
+        setMessage('An error occurred while fetching data.');
       }
     };
 
-    fetchPaymentAccounts();
-  }, []); // Empty dependency array to run only on mount
+    fetchData();
+  }, []);
 
   const handleAddPaymentAccount = async () => {
-    // Logic to add payment account via API
     if (paymentAccount && accountHolderName && bankName) {
       const newAccount = { paymentAccount, accountHolderName, bankName };
-      
+
       try {
-        const authToken = localStorage.getItem('authToken'); // Retrieve authToken from localStorage
-        
+        const authToken = localStorage.getItem('authToken');
         const response = await fetch('/api/addPaymentAccount', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`, // Set Authorization header with Bearer token
+            'Authorization': `Bearer ${authToken}`,
           },
           body: JSON.stringify(newAccount),
         });
@@ -71,21 +80,28 @@ const Search = () => {
   };
 
   const handleRequestWithdrawal = () => {
-    // Logic to request withdrawal goes here
     if (withdrawalAmount && selectedAccount) {
-      setMessage(`Withdrawal request of $${withdrawalAmount} submitted successfully to ${selectedAccount}.`);
-      setWithdrawalAmount('');
+      if (parseFloat(withdrawalAmount) > earnings) {
+        setMessage("Withdrawal amount can't be greater than available earnings.");
+      } else {
+        setMessage(`Withdrawal request of $${withdrawalAmount} submitted successfully to ${selectedAccount}.`);
+        setWithdrawalAmount('');
+      }
     } else {
       setMessage('Please enter a valid amount for withdrawal and select an account.');
     }
   };
-
+  
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-5">
+      {/* Display Earnings */}
+      <div className="text-center text-2xl font-semibold text-green-700 mb-4">
+        Earnings: ${earnings}
+      </div>
+
       <h1 className="text-center text-3xl font-bold mb-6 text-gray-800">Request Payment Withdrawal</h1>
 
       <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-md">
-        {/* Add Payment Account Section */}
         {accounts.length < 1 ? (
           <>
             <div className="mb-5">
@@ -117,8 +133,8 @@ const Search = () => {
                 placeholder="Enter your payment account number"
                 className="border border-gray-300 p-3 w-full rounded-md focus:outline-none focus:ring focus:ring-blue-300"
               />
-              <button 
-                onClick={handleAddPaymentAccount} 
+              <button
+                onClick={handleAddPaymentAccount}
                 className="bg-blue-600 text-white p-3 mt-2 w-full rounded-md hover:bg-blue-700 transition duration-200"
               >
                 Add Payment Account
@@ -127,7 +143,6 @@ const Search = () => {
           </>
         ) : (
           <>
-            {/* Displaying Added Accounts */}
             <div className="mb-5">
               <label className="block text-gray-700 mb-2 font-medium">Select Payment Account:</label>
               <select
@@ -143,8 +158,6 @@ const Search = () => {
                 ))}
               </select>
             </div>
-
-            {/* Withdrawal Amount Section */}
             <div className="mb-5">
               <label className="block text-gray-700 mb-2 font-medium">Withdrawal Amount:</label>
               <input
@@ -154,8 +167,8 @@ const Search = () => {
                 placeholder="Enter amount to withdraw"
                 className="border border-gray-300 p-3 w-full rounded-md focus:outline-none focus:ring focus:ring-green-300"
               />
-              <button 
-                onClick={handleRequestWithdrawal} 
+              <button
+                onClick={handleRequestWithdrawal}
                 className="bg-green-600 text-white p-3 mt-2 w-full rounded-md hover:bg-green-700 transition duration-200"
               >
                 Request Withdrawal
@@ -163,7 +176,6 @@ const Search = () => {
             </div>
           </>
         )}
-
         {message && <p className="mt-5 text-center text-gray-700">{message}</p>}
       </div>
     </div>

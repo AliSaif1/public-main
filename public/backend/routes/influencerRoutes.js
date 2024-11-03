@@ -8,6 +8,7 @@ import { getUserContracts, getContractByProposalID, sendDraft, approveCancelRequ
 import { uploadMedia, getMedia, editMedia, submitInstaLinks } from '../controllers/MediaController.js';
 import { getInstaMediaByUserId } from '../controllers/instaMediacontroller.js';
 import { addPaymentAccount, getPaymentAccounts } from '../controllers/withdrawalController.js';
+import { getEarnings } from '../controllers/getEarnings.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -33,5 +34,6 @@ router.put('/approveCancelRequest/:contractID', approveCancelRequest);
 router.put('/rejectCancelRequest/:contractID', rejectCancelRequest);
 router.post('/addPaymentAccount', addPaymentAccount);
 router.get('/getPaymentAccounts', getPaymentAccounts);
+router.get('/getEarnings', getEarnings);
 
 export default router;
