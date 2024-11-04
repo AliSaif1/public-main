@@ -265,5 +265,4 @@ const AddedFilters = () => {
   );
 };
 
-
-export default Search
+export default Search;
