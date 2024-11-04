@@ -35,7 +35,7 @@ const Search = () => {
         });
         if (earningsResponse.ok) {
           const earningsData = await earningsResponse.json();
-          setEarnings(earningsData.earnings);
+          setEarnings(earningsData.earnings || 0);
         } else {
           setMessage('Failed to fetch earnings.');
         }

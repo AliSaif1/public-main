@@ -4,93 +4,102 @@ import axios from 'axios';
 import ShowComments from './showComments';
 
 const OverView = () => {
-  const [customData, setCustomData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [skip, setSkip] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const limit = 15;
+    const [customData, setCustomData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [skip, setSkip] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
+    const limit = 15;
 
-  const fetchData = async () => {
-    try {
-      const response = await axios.get('/influencer/allBlogs', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-        params: { skip, limit },
-      });
-      const result = response.data;
-      const newPosts = result.blogs || [];
+    const fetchData = async () => {
+        try {
+            const response = await axios.get('/influencer/allBlogs', {
+                headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+                params: { skip, limit },
+            });
+            const result = response.data;
+            const newPosts = result.blogs || [];
 
-      setCustomData(prevData => [...prevData, ...newPosts]);
-      setHasMore(result.hasMore);
-      setSkip(prevSkip => prevSkip + limit);
-    } catch (error) {
-      setError('Error fetching blog data');
-      console.error('Error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+            // Filter duplicates
+            const uniquePosts = newPosts.filter(post => !customData.some(existingPost => existingPost._id === post._id));
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+            // Update state with unique posts
+            setCustomData(prevData => {
+                const combinedPosts = [...prevData, ...uniquePosts];
+                const uniquePostsSet = Array.from(new Set(combinedPosts.map(post => post._id)))
+                    .map(id => combinedPosts.find(post => post._id === id));
+                return uniquePostsSet;
+            });
+            setHasMore(result.hasMore);
+            setSkip(prevSkip => prevSkip + limit);
+        } catch (error) {
+            setError('Error fetching blog data');
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const loadMore = () => {
-    if (hasMore && !loading) {
-      setLoading(true);
-      fetchData();
-    }
-  };
+    const loadMore = useCallback(() => {
+        if (hasMore && !loading) {
+            setLoading(true);
+            fetchData();
+        }
+    }, [hasMore, loading]);
 
-  return (
-    <>
-      <div className="max-w-2xl mx-auto mt-2">
-        <div className="h-[1px] bg-black"></div>
-        {loading && !customData.length ? (
-          <div className="centered-spinner">
-            <div className="spinner"></div>
-          </div>
-        ) : error ? (
-          <div className="text-center mt-4">
-            <p className="text-red-600">{error}</p>
-          </div>
-        ) : (
-          <>
-            {customData.map(post => (
-              <Post
-                key={post._id}
-                userImage={post.author.photo}
-                userName={post.author.fullName}
-                postTime={new Date(post.postedAt).toLocaleString()}
-                postImage={post.blogMainImg}
-                likesCount={post.likes}
-                postTitle={post.title}
-                postID={post._id}
-                isLiked={post.liked}
-                isSaved={post.saved}
-                commentsCount={post.commentsCount}
-              />
-            ))}
-            {hasMore && (
-              <div className="text-center mt-4">
-                <button
-                  onClick={loadMore}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  {loading ? 'Loading...' : 'Load More'}
-                </button>
-              </div>
-            )}
-            {!hasMore && (
-              <div className="text-center mt-4">
-                <p className="text-gray-500 font-semibold">No more posts to load</p>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </>
-  );
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    return (
+        <>
+            <div className="max-w-2xl mx-auto mt-2">
+                <div className="h-[1px] bg-black"></div>
+                {loading && !customData.length ? (
+                    <div className="centered-spinner">
+                        <div className="spinner"></div>
+                    </div>
+                ) : error ? (
+                    <div className="text-center mt-4">
+                        <p className="text-red-600">{error}</p>
+                    </div>
+                ) : (
+                    <>
+                        {customData.map(post => (
+                            <Post
+                                key={post._id}
+                                userImage={post.author.photo}
+                                userName={post.author.fullName}
+                                postTime={new Date(post.postedAt).toLocaleString()}
+                                postImage={post.blogMainImg}
+                                likesCount={post.likes}
+                                postTitle={post.title}
+                                postID={post._id}
+                                isLiked={post.liked}
+                                isSaved={post.saved}
+                                commentsCount={post.commentsCount}
+                            />
+                        ))}
+                        {hasMore && (
+                            <div className="text-center mt-4">
+                                <button
+                                    onClick={loadMore}
+                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                >
+                                    {loading ? 'Loading...' : 'Load More'}
+                                </button>
+                            </div>
+                        )}
+                        {!hasMore && (
+                            <div className="text-center mt-4">
+                                <p className="text-gray-500 font-semibold">No more posts to load</p>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+        </>
+    );
 };
 
 const Post = ({ userImage, userName, postTime, postImage, likesCount, postTitle, postID, isLiked, isSaved, commentsCount }) => {
@@ -102,7 +111,7 @@ const Post = ({ userImage, userName, postTime, postImage, likesCount, postTitle,
   const [likeCount, setLikesCount] = useState(likesCount);
   const [commentCount, setCommentsCount] = useState(commentsCount);
   const [comment, setComment] = useState('');
-  const [showComments, setShowComments] = useState(false); // New state to show comments
+  const [showComments, setShowComments] = useState(false);
 
   const handleImageLoad = (event) => {
     const { naturalWidth, naturalHeight } = event.target;
@@ -113,23 +122,28 @@ const Post = ({ userImage, userName, postTime, postImage, likesCount, postTitle,
 
   const handleLike = useCallback(async () => {
     try {
-      setActionLoading(true);
-      await axios.post('/influencer/likePost', { postId: postID }, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
-      });
-  
-      setLiked(prevLiked => {
-        const newLikedState = !prevLiked;
-        setLikesCount(prevCount => newLikedState ? prevCount + 1 : prevCount - 1);
-        return newLikedState;
-      });
+        setActionLoading(true);
+        const response = await axios.post('/influencer/likePost', { postId: postID }, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` }
+        });
+
+        // Assuming response.data contains the updated like count
+        if (response.status === 200) {
+            // Update local state based on the response
+            setLiked(prevLiked => {
+                const newLikedState = !prevLiked;
+                // Update likesCount based on the newLikedState
+                setLikesCount(prevCount => newLikedState ? response.data.likesCount : Math.max(0, prevCount - 1));
+                return newLikedState;
+            });
+        }
     } catch (error) {
-      setActionError('Error liking the post');
-      console.error('Error liking post:', error);
+        setActionError('Error liking the post');
+        console.error('Error liking post:', error);
     } finally {
-      setActionLoading(false);
+        setActionLoading(false);
     }
-  }, [postID, liked]);
+  }, [postID]);
 
   const handleSavePost = useCallback(async () => {
     try {
@@ -183,9 +197,7 @@ const Post = ({ userImage, userName, postTime, postImage, likesCount, postTitle,
             <span className="ml-1">{likeCount}</span>
           </div>
           <div className="flex items-center">
-            <button className="focus:outline-none bg-transparent p-0" onClick={() => {
-              console.log('Button clicked');
-              setShowComments(true)}}>
+            <button className="focus:outline-none bg-transparent p-0" onClick={() => setShowComments(true)}>
               <img src="/Svg/Comment2.svg" alt="comment button" className="bg-transparent" />
             </button>
             <span className="ml-1">{commentCount}</span>
@@ -202,7 +214,6 @@ const Post = ({ userImage, userName, postTime, postImage, likesCount, postTitle,
       <div className="mt-2">
         <h2 className="font-bold text-[14px]">{postTitle}</h2>
       </div>
-      {/* Comment Input Field */}
       <form className="mt-1 flex items-center">
         <input
           type="text"
@@ -212,7 +223,6 @@ const Post = ({ userImage, userName, postTime, postImage, likesCount, postTitle,
         />
       </form>
 
-      {/* Show Comments Component */}
       <ShowComments postID={postID} show={showComments} onClose={() => setShowComments(false)} />
     </div>
   );

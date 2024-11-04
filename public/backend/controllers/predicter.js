@@ -5,7 +5,7 @@ export const getPredicitedReport = async (req, res) => {
 
   try {
     // Find the report by userName
-    const report = await Report.findOne({ fullName: userName });
+    const report = await Report.findOne({ Name: userName });
 
     // If no report is found, send a 404 response
     if (!report) {

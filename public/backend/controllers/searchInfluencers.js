@@ -25,8 +25,13 @@ export const searchInfluencers = async (req, res) => {
     // Fetch the brand's network
     const brand = await Brand.findOne({ brandID: userID }).select('network').lean();
 
-    // Extract influencer IDs from the network
-    const networkIDs = brand.network.map(influencer => influencer.influencerID.toString());
+    // Initialize an empty array for influencer IDs
+    let networkIDs = [];
+
+    // Check if the brand exists and extract influencer IDs from the network
+    if (brand) {
+      networkIDs = brand.network.map(influencer => influencer.influencerID.toString());
+    }
 
     // Check for a search query
     const query = req.query.query; // Assuming the query comes from req.query

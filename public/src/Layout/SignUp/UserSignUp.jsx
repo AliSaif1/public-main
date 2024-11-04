@@ -79,7 +79,7 @@ const UserSignUp = () => {
     if (stepperIndex === 1) {
       setLoading(true);
       try {
-        await axios.post('/api/influencerInfo', data, {
+        await axios.post('/api/saveUserInfo', data, {
           headers: {
             'Content-Type': 'multipart/form-data',
           },

@@ -1,6 +1,6 @@
 import multer from 'multer';
 import express from 'express';
-import { saveInfluencerInfo } from '../controllers/influencerController.js';
+import { saveInfluencerInfo, saveUserInfo } from '../controllers/influencerController.js';
 import { saveInfluencerIn } from '../controllers/influencerControllers.js';
 import { getDeals, getDealsByUserID , getApprovedDeals, getContractDetails, acceptContract } from '../controllers/deals.js';
 import { addProposal, deleteProposal } from '../controllers/proposalController.js';
@@ -14,6 +14,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 const router = express.Router();
 router.post('/influencerInfo', upload.single('photo'), saveInfluencerInfo);
+router.post('/saveUserInfo', upload.single('photo'), saveUserInfo);
 router.post("/Brand", upload.single("logo"), saveInfluencerIn);
 router.get("/deals", getDeals);
 router.get("/getDealsByUserID", getDealsByUserID);

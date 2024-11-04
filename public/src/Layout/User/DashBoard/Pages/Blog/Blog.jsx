@@ -14,21 +14,30 @@ const Blog = () => {
   const fetchBlogs = async () => {
     setLoading(true); // Start loading
     try {
-      const response = await axios.get(`/influencer/allBlogs`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
-        params: { skip, limit },  // Pass skip and limit as query parameters
-      });
+        const response = await axios.get(`/influencer/allBlogs`, {
+            headers: { Authorization: `Bearer ${localStorage.getItem('authToken')}` },
+            params: { skip, limit },
+        });
 
-      const result = response.data;
-      const newPosts = result.blogs || [];
-      setPosts(prevPosts => [...prevPosts, ...newPosts]);  // Append new posts to existing posts
-      setHasMore(result.hasMore);  // Update the state based on whether there are more posts
-      setSkip(prevSkip => prevSkip + limit);  // Update skip for the next fetch
+        const result = response.data;
+        console.log(result.blogs); // Check fetched blogs
+        const newPosts = result.blogs || [];
+
+        setPosts(prevPosts => {
+            const uniquePosts = [...prevPosts, ...newPosts]
+                .filter((post, index, self) => 
+                    index === self.findIndex((p) => (p._id === post._id))
+                );
+            return uniquePosts;
+        });
+
+        setHasMore(result.hasMore);
+        setSkip(prevSkip => prevSkip + limit);
     } catch (err) {
-      setError('Error fetching blogs');
-      console.error('Error:', err);
+        setError('Error fetching blogs');
+        console.error('Error:', err);
     } finally {
-      setLoading(false); // End loading
+        setLoading(false); // End loading
     }
   };
 
@@ -63,7 +72,7 @@ const Blog = () => {
               Time={new Date(post.postedAt).toLocaleTimeString()}
               Image={post.blogMainImg}
               Likes={post.likes}
-              Shares={post.shares}
+              commentsCount={post.commentsCount}
               IsLiked={post.liked}  // Pass the liked status
             />
           ))
@@ -83,7 +92,7 @@ const Blog = () => {
   );
 };
 
-const BlogPost = ({ ID, Title, Body, Time, Image, Likes, Shares, IsLiked }) => {
+const BlogPost = ({ ID, Title, Body, Time, Image, Likes, commentsCount, IsLiked }) => {
   const [liked, setLiked] = useState(IsLiked); // Initialize with the liked status
   const [likesCount, setLikesCount] = useState(Likes); // Initialize with the likes count
   const truncatedBody = Body.length > 250 ? Body.substring(0, 250) + '...' : Body;
@@ -97,7 +106,7 @@ const BlogPost = ({ ID, Title, Body, Time, Image, Likes, Shares, IsLiked }) => {
           title: Title,
           body: Body,
           likes: likesCount,
-          shares: Shares,
+          commentsCount: commentsCount,
           id: ID,
           likedStatus: liked
         },
@@ -157,7 +166,7 @@ const BlogPost = ({ ID, Title, Body, Time, Image, Likes, Shares, IsLiked }) => {
             </p>
             <p className="flex items-center gap-x-1">
               <img src="/Svg/Comment.svg" className="Avatar size-[15px]" alt="Comments" />
-              <span>{Shares}</span>
+              <span>{commentsCount}</span>
             </p>
           </div>
         </div>

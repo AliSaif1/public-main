@@ -33,16 +33,23 @@ const InfluencerProfile = ({ setShowInfluencerProfile, userName }) => {
                     throw new Error('Failed to fetch report data');
                 }
                 const data = await response.json();
-                setReportData(data);
+    
+                // Check for the specific message
+                if (data.message === "Report not found for this user") {
+                    setReportData(null); // or set it to an empty array if preferred
+                    setError("No reports for this user yet");
+                } else {
+                    setReportData(data); // Set the report data if found
+                    setError(null); // Clear any previous errors
+                }
                 setLoading(false);
             } catch (err) {
-                setError(err.message);
                 setLoading(false);
             }
         };
-
+    
         fetchReportData();
-    }, [userName]);
+    }, [userName]);    
 
     if (loading) {
         return <p>Loading...</p>;

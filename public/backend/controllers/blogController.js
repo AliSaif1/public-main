@@ -282,7 +282,7 @@ export const toggleLikePost = async (req, res) => {
     // eslint-disable-next-line no-undef
     const decoded = jwt.verify(token, process.env.JWT_SECRET); // Token verification
     const userID = decoded.id;
-    const { postId } = req.body; // Assuming blogId is also provided
+    const { postId } = req.body; // Assuming postId is provided
 
     const user = await User.findById(userID);
     if (!user) {
@@ -293,6 +293,11 @@ export const toggleLikePost = async (req, res) => {
     const likedPostIndex = user.likedPosts.findIndex(post => post.postID.toString() === postId);
 
     const currentMonth = new Date().toISOString().slice(0, 7); // Format as YYYY-MM
+
+    // Get the current likes count before toggling
+    const post = await Blog.findOne({ 'blogPosts._id': postId });
+    const currentLikesCount = post.blogPosts.find(p => p._id.toString() === postId)
+                                      .monthlyInteraction[currentMonth]?.likes || 0;
 
     if (likedPostIndex > -1) {
       // Post is already liked, so remove it from likedPosts
@@ -305,7 +310,10 @@ export const toggleLikePost = async (req, res) => {
       );
 
       await user.save();
-      return res.status(200).json({ message: 'Post unliked successfully' });
+      return res.status(200).json({
+        message: 'Post unliked successfully',
+        likesCount: Math.max(0, currentLikesCount - 1) // Return updated likes count
+      });
     } else {
       // Post is not liked yet, so add it to likedPosts
       user.likedPosts.push({ postID: postId });
@@ -317,7 +325,10 @@ export const toggleLikePost = async (req, res) => {
       );
 
       await user.save();
-      return res.status(200).json({ message: 'Post liked successfully' });
+      return res.status(200).json({
+        message: 'Post liked successfully',
+        likesCount: currentLikesCount + 1 // Return updated likes count
+      });
     }
   } catch (error) {
     console.error('Error toggling like status:', error); // Log the error for debugging
@@ -464,9 +475,12 @@ export const getSavedPosts = async (req, res) => {
 };
 
 export const getComments = async (req, res) => {
-  const { postId } = req.params; // Assuming the postId is passed as a URL parameter
-  const { page = 1 } = req.query; // Default to page 1 if no page is specified
-  const limit = 100; // Limit to 100 comments per page
+  const { postId } = req.params; // Post ID from URL parameter
+  const { page = 1, limit = 100 } = req.query; // Page and limit from query parameters
+  const maxLimit = 100; // Max limit for comments per page
+
+  // Ensure the limit does not exceed maxLimit
+  const commentsLimit = Math.min(Number(limit), maxLimit);
 
   const authHeader = req.headers.authorization;
 
@@ -478,13 +492,12 @@ export const getComments = async (req, res) => {
 
   try {
     // Verify the token
-    // eslint-disable-next-line no-undef
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.id;
 
     // Fetch the post by postId
     const post = await Blog.findOne({ 'blogPosts._id': postId })
-      .select('blogPosts.$')  // Fetch only the post with the specific postId
+      .select('blogPosts.$')  // Fetch only the specific post
       .lean()
       .exec();
 
@@ -496,14 +509,18 @@ export const getComments = async (req, res) => {
 
     let allComments = [];
 
-    // Loop through monthly interactions to gather all comments
-    blogPost.monthlyInteraction.forEach((interactionData) => {
-      const commentsMap = interactionData.commentedBy || new Map();
+    // Get the monthly interactions object for the specific month
+    const monthlyInteractions = blogPost.monthlyInteraction['2024-11']; // Adjust this based on your logic
+
+    // Check if there are interactions for the month
+    if (monthlyInteractions) {
+      const commentsMap = monthlyInteractions.commentedBy || {};
 
       // Loop through each user ID and gather comments with the user information
-      for (const [userId, comments] of commentsMap.entries()) {
-        const user = User.findById(userId).select('fullName').lean().exec();
-        const userName = user?.fullName || 'Unknown User';
+      for (const userId in commentsMap) {
+        const comments = commentsMap[userId] || [];
+        const user = await User.findById(userId).select('fullName').lean().exec();
+        const userName = user ? user.fullName : 'Unknown User'; // Assign default name if user not found
 
         // Attach user name to each comment and push to allComments array
         comments.forEach(comment => {
@@ -513,14 +530,14 @@ export const getComments = async (req, res) => {
           });
         });
       }
-    });
+    }
 
     // Implement pagination
-    const startIndex = (page - 1) * limit;
-    const paginatedComments = allComments.slice(startIndex, startIndex + limit);
+    const startIndex = (page - 1) * commentsLimit;
+    const paginatedComments = allComments.slice(startIndex, startIndex + commentsLimit);
 
     // Check if there are more comments
-    const hasMore = startIndex + limit < allComments.length;
+    const hasMore = startIndex + commentsLimit < allComments.length;
 
     // Set cache control headers to prevent caching
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -531,6 +548,7 @@ export const getComments = async (req, res) => {
     res.status(200).json({
       comments: paginatedComments,
       hasMore,
+      totalComments: allComments.length // Optionally return total comments count
     });
 
   } catch (error) {
