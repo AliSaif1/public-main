@@ -20,25 +20,33 @@ const ShowComments = ({ postID, show, onClose }) => {
     try {
       setLoading(true);
       setError(null);
-
+  
       const authToken = localStorage.getItem('authToken');
       if (!authToken) {
         throw new Error('Authorization token is missing');
       }
-
+  
       const response = await axios.get(`/Brand/getComments/${postID}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
         params: {
-          page: currentPage, // Include the current page in the request
+          page: currentPage,
         },
       });
-
+  
       console.log('API Response:', response.data);
       
       const fetchedComments = response.data?.comments || [];
-      setComments((prevComments) => [...prevComments, ...fetchedComments]); // Append new comments to existing ones
+      
+      // Filter out duplicates based on comment body and userName
+      const uniqueComments = fetchedComments.filter((newComment) => {
+        return !comments.some((existingComment) => 
+          existingComment.body === newComment.body && existingComment.userName === newComment.userName
+        );
+      });
+  
+      setComments((prevComments) => [...prevComments, ...uniqueComments]); // Append new unique comments
       setHasMore(response.data.hasMore); // Update hasMore based on the response
     } catch (err) {
       console.error('Error fetching comments:', err);
@@ -46,7 +54,7 @@ const ShowComments = ({ postID, show, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  };  
 
   useEffect(() => {
     if (commentsRef.current) {
