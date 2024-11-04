@@ -1,6 +1,7 @@
 import User from '../models/user.js';
 import { storage } from '../config/firebase.js';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getInstagramProfileData } from '../controllers/extracter.js';
 
 export const saveInfluencerInfo = async (req, res) => {
   const { userId, fullName, age, website, gender, category } = req.body;
@@ -18,11 +19,19 @@ export const saveInfluencerInfo = async (req, res) => {
       return res.status(400).json({ message: 'File size exceeds the 5MB limit.' });
     }
 
+    // Fetch Instagram profile data
+    const profileData = await getInstagramProfileData(website);
+    
+    if (parseInt(profileData.followers) < 200000) {
+      return res.status(400).json({ message: "User can't have followers less than 200k." });
+    }
+
     // Handle the image upload to Firebase Storage
     const photoRef = ref(storage, `images/${Date.now()}_${photo.originalname}`);
     await uploadBytes(photoRef, photo.buffer);
     const photoURL = await getDownloadURL(photoRef);
 
+    // Update user information, including the Instagram username
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { 
@@ -32,7 +41,7 @@ export const saveInfluencerInfo = async (req, res) => {
         photo: photoURL, 
         gender, 
         category,
-        status: 'complete'
+        status: 'complete',
       },
       { new: true } 
     );

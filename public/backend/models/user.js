@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
-  userName: { type: String, unique: true },
+  userName: { type: String },
   password: { type: String, required: true },
   userType: { type: String, required: true }, // Could be 'brand', 'influencer', etc.
   status: { type: String, default: "incomplete" },

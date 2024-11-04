@@ -5,6 +5,46 @@ import InstaMedia from '../models/instagramMedia.js';
 import Contract from '../models/contractModel.js';
 import moment from 'moment';
 
+export const getInstagramProfileData = async (profileUrl) => {
+    const options = new chrome.Options();
+    options.addArguments('--headless'); // Run in headless mode for performance
+    options.addArguments('--disable-gpu');
+    options.addArguments('--no-sandbox');
+    options.addArguments('--disable-dev-shm-usage');
+
+    const driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
+
+    try {
+        // Navigate to the specified Instagram profile URL
+        await driver.get(profileUrl);
+
+        // Wait for and retrieve followers count
+        const followersElement = await driver.wait(
+            until.elementLocated(By.css(".xl565be:nth-child(2) .html-span")),
+            15000 // Wait up to 15 seconds
+        );
+        let followers = await followersElement.getText();
+
+        // Convert followers to numeric format
+        if (followers.includes('M')) {
+            followers = parseFloat(followers) * 1_000_000; // Multiply by 1 million
+        } else if (followers.includes('K')) {
+            followers = parseFloat(followers) * 1_000; // Multiply by 1 thousand
+        } else {
+            followers = parseInt(followers.replace(/,/g, ''), 10); // Parse as integer
+        }
+        console.log(followers);
+
+        // Return followers in an object
+        return { followers };
+    } catch (error) {
+        console.error("Error fetching Instagram profile data:", error);
+        throw error;
+    } finally {
+        await driver.quit();
+    }
+};
+
 // Function to fetch Instagram post data
 export const getInstagramPostData = async (postUrl) => {
     const options = new chrome.Options();
@@ -126,3 +166,4 @@ export const updateInstagramPostData = async () => {
 };
 
 // setInterval(updateInstagramPostData, 1 * 60 * 1000);
+
